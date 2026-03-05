@@ -1,0 +1,5 @@
+.env
+indexes/
+chunks_cache/
+__pycache__/
+*.pyc
