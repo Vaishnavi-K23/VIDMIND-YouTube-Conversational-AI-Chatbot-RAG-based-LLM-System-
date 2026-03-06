@@ -71,15 +71,7 @@ Groq LLaMA Model
 Answer Generation
  ↓
 Answer + Timestamp Sources
-Tech Stack
-Component	Technology
-UI	Streamlit
-Transcript Extraction	youtube-transcript-api
-Embeddings	intfloat/multilingual-e5-base
-Vector Database	FAISS
-Keyword Search	BM25
-LLM	Groq (Llama-3.1-8B-Instant)
-Framework	LangChain
+
 How It Works
 1. Transcript Extraction
 
