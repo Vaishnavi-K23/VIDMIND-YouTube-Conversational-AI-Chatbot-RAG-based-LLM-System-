@@ -1,46 +1,41 @@
-VIDMIND — Chat With Any YouTube Video
+# VIDMIND — Chat With Any YouTube Video
 
-VIDMIND is an AI system that allows users to chat with any YouTube video by querying its transcript.
+VIDMIND is an AI-powered system that lets you chat with any YouTube video using its transcript. Instead of watching an entire video, ask questions and get answers grounded in the transcript with timestamped sources.
 
-Instead of watching an entire video, users can ask questions and receive answers grounded in the transcript with timestamped sources.
+---
 
-The system uses a Retrieval-Augmented Generation (RAG) pipeline combining transcript processing, hybrid retrieval, and large language models to generate accurate responses.
+## Demo
 
-Demo
+1. Paste a YouTube video URL
+2. The transcript is extracted and indexed automatically
+3. Ask questions about the video
+4. Receive answers with timestamped source links
 
-Example workflow:
+**Example query:**
+> *"What does the speaker say about AGI risk?"*
 
-Paste a YouTube video URL
+The system retrieves the most relevant transcript segments and generates a grounded answer with links to the exact moments in the video.
 
-Transcript is extracted automatically
+---
 
-Transcript is processed and indexed
+## Features
 
-Ask questions about the video
+- 💬 Chat with any YouTube video
+- 📄 Automatic transcript extraction and cleaning
+- 🔍 Hybrid retrieval (semantic + keyword search)
+- 🕐 Timestamped source citations with clickable links
+- 🔄 Follow-up question support
+- 🌍 Multilingual transcript support
+- ⚡ Fast inference via Groq LLM API
+- 🖥️ Interactive chat UI built with Streamlit
 
-Receive answers with timestamped sources
+---
 
-Example query:
+## System Architecture
 
-What does the speaker say about AGI risk?
+VIDMIND uses a Retrieval-Augmented Generation (RAG) pipeline:
 
-The system retrieves relevant transcript segments and generates a grounded answer.
-
-Features
-
-• Chat with any YouTube video
-• Transcript extraction and processing
-• Hybrid retrieval (semantic + keyword search)
-• Timestamped source citations
-• Follow-up question support
-• Multilingual transcript support
-• Fast inference using Groq LLM API
-• Interactive chat UI built with Streamlit
-
-System Architecture
-
-VIDMIND uses a Retrieval-Augmented Generation (RAG) architecture.
-
+```
 User
  ↓
 Streamlit UI
@@ -58,8 +53,8 @@ Embedding Generation (multilingual-e5-base)
 Vector Storage (FAISS)
  ↓
 Hybrid Retrieval
-   ├ Semantic Search (FAISS)
-   └ Keyword Search (BM25)
+   ├── Semantic Search (FAISS)
+   └── Keyword Search (BM25)
  ↓
 Reciprocal Rank Fusion
  ↓
@@ -67,205 +62,174 @@ Context Selection
  ↓
 Groq LLaMA Model
  ↓
-Answer Generation
- ↓
-Answer + Timestamp Sources
-Tech Stack
-Component	Technology
-UI	Streamlit
-Transcript Extraction	youtube-transcript-api
-Embeddings	intfloat/multilingual-e5-base
-Vector Database	FAISS
-Keyword Search	BM25
-LLM	Groq (Llama-3.1-8B-Instant)
-Framework	LangChain
-How It Works
-1. Transcript Extraction
+Answer + Timestamped Sources
+```
 
-The system retrieves subtitles using:
+---
 
-youtube_transcript_api
+## Tech Stack
 
-This provides the caption text and timestamps for each segment.
+| Component | Technology |
+|---|---|
+| UI | Streamlit |
+| Transcript Extraction | youtube-transcript-api |
+| Embeddings | intfloat/multilingual-e5-base |
+| Vector Database | FAISS |
+| Keyword Search | BM25 |
+| LLM | Groq (Llama-3.1-8B-Instant) |
+| Framework | LangChain |
 
-2. Transcript Cleaning
+---
 
-Transcript data is cleaned to remove noise such as:
+## How It Works
 
-[music]
-[applause]
-[laughter]
+### 1. Transcript Extraction
+Subtitles are retrieved using `youtube_transcript_api`, providing caption text and timestamps for each segment.
 
-Duplicate captions are filtered using text similarity checks.
+### 2. Transcript Cleaning
+Noise is removed from the transcript (e.g. `[music]`, `[applause]`), and duplicate captions are filtered using text similarity checks.
 
-3. Window-Based Chunking
+### 3. Window-Based Chunking
+Captions are merged into ~60-second time-based chunks:
 
-Captions are merged into time-based chunks (~60 seconds).
-
-Example chunk:
-
+```json
 {
- page_content: "...transcript text...",
- metadata:
-   start: 120
-   end: 180
+  "page_content": "...transcript text...",
+  "metadata": {
+    "start": 120,
+    "end": 180
+  }
 }
+```
 
-Benefits:
+This provides better semantic context, fewer embeddings, and improved retrieval quality.
 
-• Better semantic context
-• Fewer embeddings
-• Improved retrieval quality
+### 4. Embedding Generation
+Transcript chunks are converted to vector embeddings using `intfloat/multilingual-e5-base`, enabling multilingual retrieval.
 
-4. Embedding Generation
+### 5. Vector Indexing
+Embeddings are stored in a persistent FAISS index:
 
-Transcript chunks are converted into vector embeddings using:
-
-intfloat/multilingual-e5-base
-
-This model supports multilingual retrieval, allowing users to query videos in different languages.
-
-5. Vector Indexing
-
-Embeddings are stored in a FAISS vector index.
-
-Directory structure:
-
+```
 indexes/
-   video_id/
-      index.faiss
+└── {video_id}/
+    └── index.faiss
+```
 
-Benefits:
+Previously processed videos reload instantly from the cached index.
 
-• Fast similarity search
-• Persistent storage
-• Quick reload for previously processed videos
+### 6. Hybrid Retrieval
+Two retrieval methods are combined for better accuracy:
 
-6. Hybrid Retrieval
+- **Semantic Search (FAISS)** — Best for paraphrased questions and conceptual meaning
+- **Keyword Search (BM25)** — Best for names, numbers, and exact phrases (e.g. *"Sam Altman"*, *"300 million workers"*)
 
-VIDMIND uses hybrid retrieval to improve search accuracy.
+### 7. Reciprocal Rank Fusion
+Results from both methods are merged using Reciprocal Rank Fusion (RRF) for improved ranking stability.
 
-Semantic Search
+### 8. Answer Generation
+Relevant chunks are passed to the LLM along with the user query. The model generates an answer based solely on the retrieved transcript context.
 
-Uses FAISS vector similarity.
+**Model:** `Groq / llama-3.1-8b-instant`
 
-Best for:
+### 9. Source Attribution
+Every answer includes clickable timestamped sources, e.g.:
 
-• paraphrased questions
-• semantic meaning
+> `[120s–180s]` → jumps directly to that moment in the video
 
-Keyword Search
+---
 
-Uses BM25 keyword matching.
+## Getting Started
 
-Best for:
+### Prerequisites
+- Python 3.8+
+- A [Groq API key](https://console.groq.com)
 
-• names
-• numbers
-• exact phrases
+### Installation
 
-Example:
-
-Sam Altman
-300 million workers
-7. Reciprocal Rank Fusion
-
-Results from both retrieval methods are combined using:
-
-Reciprocal Rank Fusion (RRF)
-
-This improves ranking stability and retrieval accuracy.
-
-8. Answer Generation
-
-Relevant transcript chunks are sent to the LLM with the user query.
-
-Model used:
-
-Groq
-llama-3.1-8b-instant
-
-The LLM generates an answer based only on retrieved transcript context.
-
-9. Source Attribution
-
-Each answer includes timestamped sources.
-
-Example:
-
-[120s–180s] → link to video timestamp
-
-Clicking the source jumps directly to the relevant part of the video.
-
-Performance Optimizations
-
-Early versions of the system had very slow responses (~3–4 minutes).
-
-Several improvements significantly reduced latency:
-
-• Switched from local LLM inference to Groq GPU inference
-• Cached embedding model
-• Persisted FAISS indexes
-• Cached transcript chunks
-• Reduced retrieval size (k = 6 → k = 3)
-• Removed duplicate retrieval calls
-• Optimized prompt structure
-
-Final performance:
-
-Response time: ~1–3 seconds
-Running Locally
-Clone the repository
+```bash
+# Clone the repository
 git clone https://github.com/yourusername/vidmind.git
 cd vidmind
-Install dependencies
+
+# Install dependencies
 pip install -r requirements.txt
-Add environment variables
+```
 
-Create a .env file:
+### Configuration
 
+Create a `.env` file in the project root:
+
+```
 GROQ_API_KEY=your_api_key_here
-Run the application
+```
+
+### Run
+
+```bash
 streamlit run app.py
+```
 
-Open:
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
-http://localhost:8501
-Project Structure
+---
+
+## Project Structure
+
+```
 vidmind/
-│
-├── app.py
-├── RAG_core.py
+├── app.py            # Streamlit UI
+├── RAG_core.py       # RAG pipeline logic
 ├── requirements.txt
 ├── README.md
-├── indexes/
-├── chunks_cache/
-Limitations
+├── indexes/          # Persisted FAISS indexes
+└── chunks_cache/     # Cached transcript chunks
+```
 
-Some videos may not have transcripts available.
+---
 
-Possible reasons:
+## Performance
 
-• captions disabled
-• private videos
-• YouTube blocking requests from cloud IPs
+Early versions had response times of 3–4 minutes. Several optimizations reduced this to **~1–3 seconds**:
 
-Future Improvements
+- Switched from local LLM to Groq GPU inference
+- Cached embedding model and transcript chunks
+- Persisted FAISS indexes for previously seen videos
+- Reduced retrieval size (`k = 6 → k = 3`)
+- Removed duplicate retrieval calls
+- Optimized prompt structure
 
-Potential extensions:
+---
 
-• streaming responses
-• multi-video knowledge base
-• timeline topic extraction
-• automatic video summaries
-• improved UI interaction
+## Limitations
 
-Lessons Learned
+Some videos may not have transcripts available due to:
+- Captions being disabled by the uploader
+- Private or unlisted videos
+- YouTube blocking requests from cloud/server IPs
 
-Building this system highlighted several important insights:
+---
 
-• Retrieval quality can be as important as the LLM itself
-• Hybrid retrieval improves search robustness
-• Context size significantly impacts latency
-• Caching is essential for production systems
-• UX improvements strongly affect perceived performance
+## Roadmap
+
+- [ ] Streaming responses
+- [ ] Multi-video knowledge base
+- [ ] Timeline topic extraction
+- [ ] Automatic video summaries
+- [ ] Improved UI interactions
+
+---
+
+## Lessons Learned
+
+- Retrieval quality can matter as much as the LLM itself
+- Hybrid retrieval meaningfully improves search robustness
+- Context size significantly impacts latency
+- Caching is essential for production-grade systems
+- UX improvements strongly affect perceived performance
+
+---
+
+## License
+
+MIT
